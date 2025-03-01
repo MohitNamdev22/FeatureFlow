@@ -1,17 +1,33 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Info, Edit, Download, Eye } from 'lucide-react';
+import EmailPopup from './EmailPopup';
+
 
 const UXWireframeGenerator = () => {
   const [selectedWireframe, setSelectedWireframe] = useState('Motiff');
   const [uploadType, setUploadType] = useState('motiffPath');
   const [motiffPath, setMotiffPath] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [showEmailPopup, setShowEmailPopup] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
+  
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
       setSelectedFile(file);
     }
+  };
+
+  const handleGenerateClick = () => {
+    setShowEmailPopup(true);
+  };
+
+  const handleEmailSubmit = (email) => {
+    setEmail(email);
+    setIsVerified(true);
+    setShowEmailPopup(false);
   };
 
   // Define the renderUploadSection function that was missing
@@ -179,12 +195,23 @@ const UXWireframeGenerator = () => {
           </div>
         </div>
         
-        <button className="bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 transition-colors">
+        <button 
+          className="bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 transition-colors"
+          onClick={handleGenerateClick}
+        >
           Generate Wireframe Instructions
         </button>
       </div>
+
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+
+
+{isVerified && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* ... existing instructions and wireframes boxes ... */}
+        
+      
         {/* Instructions Box */}
         <div className="border rounded-lg">
           <div className="flex items-center justify-between p-3 border-b">
@@ -274,75 +301,20 @@ const UXWireframeGenerator = () => {
                 </div>
               </div>
                     
-              <div className="border rounded-lg overflow-hidden mb-4">
-                <table className="w-full bg-white">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="p-2 text-left text-xs font-medium text-gray-600">Section</th>
-                      <th className="p-2 text-left text-xs font-medium text-gray-600">Type</th>
-                      <th className="p-2 text-left text-xs font-medium text-gray-600">Description</th>
-                      <th className="p-2 text-left text-xs font-medium text-gray-600">Controls</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t">
-                      <td className="p-2 text-xs">Header</td>
-                      <td className="p-2 text-xs">Fixed</td>
-                      <td className="p-2 text-xs">Contains page title</td>
-                      <td className="p-2 text-xs">
-                        <div className="flex space-x-2">
-                          <button className="text-indigo-600 text-xs flex items-center">
-                            <Edit size={12} className="mr-1" />
-                            Edit
-                          </button>
-                          <button className="text-indigo-600 text-xs flex items-center">
-                            <Eye size={12} className="mr-1" />
-                            Preview
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="p-2 text-xs">Footer</td>
-                      <td className="p-2 text-xs">Fixed</td>
-                      <td className="p-2 text-xs">Contains actions</td>
-                      <td className="p-2 text-xs">
-                        <div className="flex space-x-2">
-                          <button className="text-indigo-600 text-xs flex items-center">
-                            <Edit size={12} className="mr-1" />
-                            Edit
-                          </button>
-                          <button className="text-indigo-600 text-xs flex items-center">
-                            <Eye size={12} className="mr-1" />
-                            Preview
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr className="border-t">
-                      <td className="p-2 text-xs">Content</td>
-                      <td className="p-2 text-xs">Dynamic</td>
-                      <td className="p-2 text-xs">Main content area</td>
-                      <td className="p-2 text-xs">
-                        <div className="flex space-x-2">
-                          <button className="text-indigo-600 text-xs flex items-center">
-                            <Edit size={12} className="mr-1" />
-                            Edit
-                          </button>
-                          <button className="text-indigo-600 text-xs flex items-center">
-                            <Eye size={12} className="mr-1" />
-                            Preview
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+              
             </div>
           </div>
         </div>
       </div>
+      )}
+
+
+      {showEmailPopup && (
+        <EmailPopup
+          onSubmit={handleEmailSubmit}
+          onClose={() => setShowEmailPopup(false)}
+        />
+      )}
     </div>
   );
 };
