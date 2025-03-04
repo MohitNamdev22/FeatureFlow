@@ -13,12 +13,45 @@ const UXWireframeGenerator = () => {
   const [isVerified, setIsVerified] = useState(false);
   
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+  const handleFileUpload = async (section, event) => {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+  
+    const fileObjects = await Promise.all(files.map(async file => ({
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      data: await readFileAsDataURL(file),
+      uploadDate: new Date().toISOString()
+    })));
+  
+    setUploads(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        files: [...prev[section].files, ...fileObjects]
+      }
+    }));
+  
+    // Save to localStorage
+    localStorage.setItem('wireframeUploads', JSON.stringify({
+      ...uploads,
+      [section]: {
+        ...uploads[section],
+        files: [...uploads[section].files, ...fileObjects]
+      }
+    }));
   };
+
+  const readFileAsDataURL = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
 
   const handleGenerateClick = () => {
     setShowEmailPopup(true);
@@ -76,6 +109,27 @@ const UXWireframeGenerator = () => {
     }
   };
 
+  const [uploads, setUploads] = useState({
+    uxSpecs: { text: '', files: [] },
+    userResearch: { text: '', files: [] },
+    requirements: { text: '', files: [] },
+    meetingNotes: { text: '', files: [] }
+  });
+  
+  const handleTextChange = (section, value) => {
+    setUploads(prev => ({
+      ...prev,
+      [section]: { ...prev[section], text: value }
+    }));
+    // Save to localStorage
+    localStorage.setItem('wireframeUploads', JSON.stringify({
+      ...uploads,
+      [section]: { ...uploads[section], text: value }
+    }));
+  };
+
+  
+
   return (
     <div className="flex flex-col w-full mx-auto bg-white rounded-lg shadow p-6">
       {/* Header */}
@@ -91,8 +145,8 @@ const UXWireframeGenerator = () => {
       
       {/* Input Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* UX Specs */}
-        <div className="border rounded-lg p-4">
+       
+        {/* <div className="border rounded-lg p-4">
           <div className="flex items-start mb-2">
             <FileText size={18} className="mr-2 text-gray-600 mt-1" />
             <div>
@@ -110,7 +164,6 @@ const UXWireframeGenerator = () => {
           </button>
         </div>
         
-        {/* User Research */}
         <div className="border rounded-lg p-4">
           <div className="flex items-start mb-2">
             <Info size={18} className="mr-2 text-gray-600 mt-1" />
@@ -129,7 +182,6 @@ const UXWireframeGenerator = () => {
           </button>
         </div>
         
-        {/* Requirement Documentation */}
         <div className="border rounded-lg p-4">
           <div className="flex items-start mb-2">
             <FileText size={18} className="mr-2 text-gray-600 mt-1" />
@@ -148,7 +200,6 @@ const UXWireframeGenerator = () => {
           </button>
         </div>
         
-        {/* Meeting Notes */}
         <div className="border rounded-lg p-4">
           <div className="flex items-start mb-2">
             <FileText size={18} className="mr-2 text-gray-600 mt-1" />
@@ -165,7 +216,193 @@ const UXWireframeGenerator = () => {
             <Upload size={16} className="mr-1" />
             Upload file
           </button>
+        </div> */}
+
+        {/* UX Specs */}
+<div className="border rounded-lg p-4">
+  <div className="flex items-start mb-2">
+    <FileText size={18} className="mr-2 text-gray-600 mt-1" />
+    <div>
+      <h3 className="font-semibold text-gray-800">UX Specs (BA)</h3>
+      <p className="text-xs text-gray-600">Include layout requirements, component specs, and design guidelines.</p>
+    </div>
+  </div>
+  <textarea 
+    className="w-full h-32 border rounded p-2 text-sm mb-2"
+    placeholder="Paste your UX specifications here..."
+    value={uploads.uxSpecs.text}
+    onChange={(e) => handleTextChange('uxSpecs', e.target.value)}
+  />
+  <div className="flex flex-col space-y-2">
+    <input
+      type="file"
+      id="uxSpecs-upload"
+      className="hidden"
+      multiple
+      onChange={(e) => handleFileUpload('uxSpecs', e)}
+    />
+    <label 
+      htmlFor="uxSpecs-upload"
+      className="flex items-center text-indigo-600 text-sm font-medium cursor-pointer"
+    >
+      <Upload size={16} className="mr-1" />
+      Upload file
+    </label>
+    {uploads.uxSpecs.files.length > 0 && (
+      <div className="mt-2">
+        <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
+        <ul className="text-xs text-gray-600">
+          {uploads.uxSpecs.files.map((file, index) => (
+            <li key={index} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+</div>
+
+  {/* User Research */}
+  <div className="border rounded-lg p-4">
+    <div className="flex items-start mb-2">
+      <Info size={18} className="mr-2 text-gray-600 mt-1" />
+      <div>
+        <h3 className="font-semibold text-gray-800">User Research</h3>
+        <p className="text-xs text-gray-600">Add insights from user interviews, surveys, and analytics</p>
+      </div>
+    </div>
+    <textarea 
+      className="w-full h-32 border rounded p-2 text-sm mb-2"
+      placeholder="Paste your user research data here..."
+      value={uploads.userResearch.text}
+      onChange={(e) => handleTextChange('userResearch', e.target.value)}
+    />
+    <div className="flex flex-col space-y-2">
+      <input
+        type="file"
+        id="userResearch-upload"
+        className="hidden"
+        multiple
+        onChange={(e) => handleFileUpload('userResearch', e)}
+      />
+      <label 
+        htmlFor="userResearch-upload"
+        className="flex items-center text-indigo-600 text-sm font-medium cursor-pointer"
+      >
+        <Upload size={16} className="mr-1" />
+        Upload file
+      </label>
+      {uploads.userResearch.files.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
+          <ul className="text-xs text-gray-600">
+            {uploads.userResearch.files.map((file, index) => (
+              <li key={index} className="flex items-center">
+                <FileText size={12} className="mr-1" />
+                {file.name}
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
+    </div>
+  </div>
+
+  {/* Requirements Documentation */}
+  <div className="border rounded-lg p-4">
+    <div className="flex items-start mb-2">
+      <FileText size={18} className="mr-2 text-gray-600 mt-1" />
+      <div>
+        <h3 className="font-semibold text-gray-800">Requirements Doc</h3>
+        <p className="text-xs text-gray-600">Include functional and technical requirements</p>
+      </div>
+    </div>
+    <textarea 
+      className="w-full h-32 border rounded p-2 text-sm mb-2"
+      placeholder="Paste your requirements here..."
+      value={uploads.requirements.text}
+      onChange={(e) => handleTextChange('requirements', e.target.value)}
+    />
+    <div className="flex flex-col space-y-2">
+      <input
+        type="file"
+        id="requirements-upload"
+        className="hidden"
+        multiple
+        onChange={(e) => handleFileUpload('requirements', e)}
+      />
+      <label 
+        htmlFor="requirements-upload"
+        className="flex items-center text-indigo-600 text-sm font-medium cursor-pointer"
+      >
+        <Upload size={16} className="mr-1" />
+        Upload file
+      </label>
+      {uploads.requirements.files.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
+          <ul className="text-xs text-gray-600">
+            {uploads.requirements.files.map((file, index) => (
+              <li key={index} className="flex items-center">
+                <FileText size={12} className="mr-1" />
+                {file.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* Meeting Notes */}
+  <div className="border rounded-lg p-4">
+    <div className="flex items-start mb-2">
+      <FileText size={18} className="mr-2 text-gray-600 mt-1" />
+      <div>
+        <h3 className="font-semibold text-gray-800">Meeting Notes</h3>
+        <p className="text-xs text-gray-600">Include discussion points and decisions</p>
+      </div>
+    </div>
+    <textarea 
+      className="w-full h-32 border rounded p-2 text-sm mb-2"
+      placeholder="Paste your meeting notes here..."
+      value={uploads.meetingNotes.text}
+      onChange={(e) => handleTextChange('meetingNotes', e.target.value)}
+    />
+    <div className="flex flex-col space-y-2">
+      <input
+        type="file"
+        id="meetingNotes-upload"
+        className="hidden"
+        multiple
+        onChange={(e) => handleFileUpload('meetingNotes', e)}
+      />
+      <label 
+        htmlFor="meetingNotes-upload"
+        className="flex items-center text-indigo-600 text-sm font-medium cursor-pointer"
+      >
+        <Upload size={16} className="mr-1" />
+        Upload file
+      </label>
+      {uploads.meetingNotes.files.length > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
+          <ul className="text-xs text-gray-600">
+            {uploads.meetingNotes.files.map((file, index) => (
+              <li key={index} className="flex items-center">
+                <FileText size={12} className="mr-1" />
+                {file.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  </div>
+
+
       </div>
       
       {/* Wireframe Selection & Generate Button */}
