@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Info, Edit, Download, Eye } from 'lucide-react';
 import EmailPopup from './EmailPopup';
+import { CLOUDINARY_CONFIG } from './config/cloudinary';
+
 
 
 const UXWireframeGenerator = () => {
@@ -17,30 +19,82 @@ const UXWireframeGenerator = () => {
     const files = Array.from(event.target.files);
     if (files.length === 0) return;
   
-    const fileObjects = await Promise.all(files.map(async file => ({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      data: await readFileAsDataURL(file),
-      uploadDate: new Date().toISOString()
-    })));
+    try {
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+        formData.append('folder', `uxwireframe/${section}`);
   
-    setUploads(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        files: [...prev[section].files, ...fileObjects]
-      }
-    }));
+        const response = await fetch(CLOUDINARY_CONFIG.apiUrl, {
+          method: 'POST',
+          body: formData
+        });
   
-    // Save to localStorage
-    localStorage.setItem('wireframeUploads', JSON.stringify({
-      ...uploads,
-      [section]: {
-        ...uploads[section],
-        files: [...uploads[section].files, ...fileObjects]
-      }
-    }));
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+  
+        const data = await response.json();
+  
+        return {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          url: data.secure_url,
+          path: data.public_id,
+          uploadDate: new Date().toISOString()
+        };
+      });
+  
+      const uploadedFiles = await Promise.all(uploadPromises);
+  
+      setUploads(prev => ({
+        ...prev,
+        [section]: {
+          ...prev[section],
+          files: [...prev[section].files, ...uploadedFiles]
+        }
+      }));
+  
+      // Store paths for ML team
+      const filePaths = uploadedFiles.map(file => ({
+        name: file.name,
+        cloudinaryUrl: file.url,
+        publicId: file.path
+      }));
+  
+      console.log('File paths for ML team:', filePaths);
+  
+    } catch (error) {
+      console.error('Upload failed:', error);
+      // Add error handling UI here
+    }
+  };
+  
+  // Add a function to get all file paths
+  const getAllFilePaths = () => {
+    const paths = {};
+    Object.keys(uploads).forEach(section => {
+      paths[section] = uploads[section].files.map(file => ({
+        name: file.name,
+        cloudinaryUrl: file.url,
+        publicId: file.path
+      }));
+    });
+    return paths;
+  };
+  
+  // Add export paths button handler
+  const handleExportPaths = () => {
+    const paths = getAllFilePaths();
+    const blob = new Blob([JSON.stringify(paths, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cloudinary-paths.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const readFileAsDataURL = (file) => {
@@ -142,6 +196,12 @@ const UXWireframeGenerator = () => {
           <p className="text-gray-600 text-sm">Paste your UX inputs and generate a structured wireframe.</p>
         </div>
       </div>
+      <button 
+    className="ml-auto bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors text-sm"
+    onClick={handleExportPaths}
+  >
+    Export File Paths
+  </button>
       
       {/* Input Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
