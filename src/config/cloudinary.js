@@ -1,5 +1,5 @@
 export const CLOUDINARY_CONFIG = {
-    cloudName: 'de3muhxii',
+    cloudName: 'dv85oarho',
     uploadPreset: 'frontend_uploads',
-    apiUrl: 'https://api.cloudinary.com/v1_1/de3muhxii/upload'
+    apiUrl: 'https://api.cloudinary.com/v1_1/dv85oarho/upload'
   };
