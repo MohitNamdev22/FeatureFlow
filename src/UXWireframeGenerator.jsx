@@ -14,6 +14,7 @@ const UXWireframeGenerator = () => {
   const [email, setEmail] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   
+  
 
   const handleFileUpload = async (section, event) => {
     const files = Array.from(event.target.files);
@@ -164,11 +165,23 @@ const UXWireframeGenerator = () => {
   };
 
   const [uploads, setUploads] = useState({
-    uxSpecs: { text: '', files: [] },
-    userResearch: { text: '', files: [] },
-    requirements: { text: '', files: [] },
-    meetingNotes: { text: '', files: [] }
+    uxSpecs: { text: '', pendingFiles: [], files: [] },
+    userResearch: { text: '', pendingFiles: [], files: [] },
+    requirements: { text: '', pendingFiles: [], files: [] },
+    meetingNotes: { text: '', pendingFiles: [], files: [] }
   });
+
+  const handleLocalFileUpload = (section, event) => {
+    const newFiles = Array.from(event.target.files);
+    if (newFiles.length === 0) return;
+    setUploads(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        pendingFiles: [...prev[section].pendingFiles, ...newFiles]
+      }
+    }));
+  };
   
   const handleTextChange = (section, value) => {
     setUploads(prev => ({
@@ -180,6 +193,66 @@ const UXWireframeGenerator = () => {
       ...uploads,
       [section]: { ...uploads[section], text: value }
     }));
+  };
+
+  const handleSaveFiles = async () => {
+    // Validate that all sections have at least one pending file
+    const sections = ['uxSpecs', 'userResearch', 'requirements', 'meetingNotes'];
+    const missing = sections.filter(section => uploads[section].pendingFiles.length === 0);
+    if (missing.length > 0) {
+      alert(`You must select files for: ${missing.join(', ')}`);
+      return;
+    }
+  
+    // For each section, for each pending file, call Cloudinary upload API
+    try {
+      for (const section of sections) {
+        const pending = uploads[section].pendingFiles;
+        const uploadPromises = pending.map(async (file) => {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+          formData.append('folder', `uxwireframe/${section}`);
+  
+          const response = await fetch(CLOUDINARY_CONFIG.apiUrl, {
+            method: 'POST',
+            body: formData
+          });
+          if (!response.ok) {
+            throw new Error('Upload failed for ' + file.name);
+          }
+          const data = await response.json();
+          return {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            url: data.secure_url,
+            path: data.public_id,
+            uploadDate: new Date().toISOString()
+          };
+        });
+        const uploadedFiles = await Promise.all(uploadPromises);
+        setUploads(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section],
+            // Append uploaded files to files array and clear pendingFiles
+            files: [...prev[section].files, ...uploadedFiles],
+            pendingFiles: []
+          }
+        }));
+        // Optionally, log file paths for ML team
+        console.log(`File paths for ${section}:`, uploadedFiles.map(file => ({
+          name: file.name,
+          cloudinaryUrl: file.url,
+          publicId: file.path
+        })));
+      }
+      alert('All files have been uploaded successfully.');
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert(`Error uploading files: ${error.message}`);
+    }
   };
 
   
@@ -196,12 +269,12 @@ const UXWireframeGenerator = () => {
           <p className="text-gray-600 text-sm">Paste your UX inputs and generate a structured wireframe.</p>
         </div>
       </div>
-      <button 
+      {/* <button 
     className="ml-auto bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors text-sm"
     onClick={handleExportPaths}
   >
     Export File Paths
-  </button>
+  </button> */}
       
       {/* Input Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -299,7 +372,7 @@ const UXWireframeGenerator = () => {
       id="uxSpecs-upload"
       className="hidden"
       multiple
-      onChange={(e) => handleFileUpload('uxSpecs', e)}
+      onChange={(e) => handleLocalFileUpload('uxSpecs', e)}
     />
     <label 
       htmlFor="uxSpecs-upload"
@@ -308,12 +381,18 @@ const UXWireframeGenerator = () => {
       <Upload size={16} className="mr-1" />
       Upload file
     </label>
-    {uploads.uxSpecs.files.length > 0 && (
+    {(uploads.uxSpecs.pendingFiles.length > 0 || uploads.uxSpecs.files.length > 0) && (
       <div className="mt-2">
-        <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
+        <p className="text-xs text-gray-600 mb-1">Selected files:</p>
         <ul className="text-xs text-gray-600">
+          {uploads.uxSpecs.pendingFiles.map((file, index) => (
+            <li key={`pending-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
           {uploads.uxSpecs.files.map((file, index) => (
-            <li key={index} className="flex items-center">
+            <li key={`uploaded-${index}`} className="flex items-center">
               <FileText size={12} className="mr-1" />
               {file.name}
             </li>
@@ -345,7 +424,7 @@ const UXWireframeGenerator = () => {
         id="userResearch-upload"
         className="hidden"
         multiple
-        onChange={(e) => handleFileUpload('userResearch', e)}
+        onChange={(e) => handleLocalFileUpload('userResearch', e)}
       />
       <label 
         htmlFor="userResearch-upload"
@@ -354,19 +433,25 @@ const UXWireframeGenerator = () => {
         <Upload size={16} className="mr-1" />
         Upload file
       </label>
-      {uploads.userResearch.files.length > 0 && (
-        <div className="mt-2">
-          <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
-          <ul className="text-xs text-gray-600">
-            {uploads.userResearch.files.map((file, index) => (
-              <li key={index} className="flex items-center">
-                <FileText size={12} className="mr-1" />
-                {file.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {(uploads.userResearch.pendingFiles.length > 0 || uploads.userResearch.files.length > 0) && (
+      <div className="mt-2">
+        <p className="text-xs text-gray-600 mb-1">Selected files:</p>
+        <ul className="text-xs text-gray-600">
+          {uploads.userResearch.pendingFiles.map((file, index) => (
+            <li key={`pending-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+          {uploads.userResearch.files.map((file, index) => (
+            <li key={`uploaded-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
     </div>
   </div>
 
@@ -391,7 +476,7 @@ const UXWireframeGenerator = () => {
         id="requirements-upload"
         className="hidden"
         multiple
-        onChange={(e) => handleFileUpload('requirements', e)}
+        onChange={(e) => handleLocalFileUpload('requirements', e)}
       />
       <label 
         htmlFor="requirements-upload"
@@ -400,19 +485,27 @@ const UXWireframeGenerator = () => {
         <Upload size={16} className="mr-1" />
         Upload file
       </label>
-      {uploads.requirements.files.length > 0 && (
-        <div className="mt-2">
-          <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
-          <ul className="text-xs text-gray-600">
-            {uploads.requirements.files.map((file, index) => (
-              <li key={index} className="flex items-center">
-                <FileText size={12} className="mr-1" />
-                {file.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+
+{(uploads.requirements.pendingFiles.length > 0 || uploads.requirements.files.length > 0) && (
+      <div className="mt-2">
+        <p className="text-xs text-gray-600 mb-1">Selected files:</p>
+        <ul className="text-xs text-gray-600">
+          {uploads.requirements.pendingFiles.map((file, index) => (
+            <li key={`pending-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+          {uploads.requirements.files.map((file, index) => (
+            <li key={`uploaded-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
     </div>
   </div>
 
@@ -437,7 +530,7 @@ const UXWireframeGenerator = () => {
         id="meetingNotes-upload"
         className="hidden"
         multiple
-        onChange={(e) => handleFileUpload('meetingNotes', e)}
+        onChange={(e) => handleLocalFileUpload('meetingNotes', e)}
       />
       <label 
         htmlFor="meetingNotes-upload"
@@ -446,21 +539,37 @@ const UXWireframeGenerator = () => {
         <Upload size={16} className="mr-1" />
         Upload file
       </label>
-      {uploads.meetingNotes.files.length > 0 && (
-        <div className="mt-2">
-          <p className="text-xs text-gray-600 mb-1">Uploaded files:</p>
-          <ul className="text-xs text-gray-600">
-            {uploads.meetingNotes.files.map((file, index) => (
-              <li key={index} className="flex items-center">
-                <FileText size={12} className="mr-1" />
-                {file.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {(uploads.meetingNotes.pendingFiles.length > 0 || uploads.meetingNotes.files.length > 0) && (
+      <div className="mt-2">
+        <p className="text-xs text-gray-600 mb-1">Selected files:</p>
+        <ul className="text-xs text-gray-600">
+          {uploads.meetingNotes.pendingFiles.map((file, index) => (
+            <li key={`pending-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+          {uploads.meetingNotes.files.map((file, index) => (
+            <li key={`uploaded-${index}`} className="flex items-center">
+              <FileText size={12} className="mr-1" />
+              {file.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
     </div>
+
+    
   </div>
+  <div className="flex justify-start">
+  <button 
+    className="bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 transition-colors"
+    onClick={handleSaveFiles}
+  >
+    Upload Files
+  </button>
+</div>
 
 
       </div>
