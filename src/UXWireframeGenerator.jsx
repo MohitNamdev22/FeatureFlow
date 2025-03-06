@@ -196,7 +196,6 @@ const UXWireframeGenerator = () => {
   };
 
   const handleSaveFiles = async () => {
-    // Validate that all sections have at least one pending file
     const sections = ['uxSpecs', 'userResearch', 'requirements', 'meetingNotes'];
     const missing = sections.filter(section => uploads[section].pendingFiles.length === 0);
     if (missing.length > 0) {
@@ -204,23 +203,27 @@ const UXWireframeGenerator = () => {
       return;
     }
   
-    // For each section, for each pending file, call Cloudinary upload API
     try {
       for (const section of sections) {
         const pending = uploads[section].pendingFiles;
         const uploadPromises = pending.map(async (file) => {
           const formData = new FormData();
           formData.append('file', file);
-          formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+          formData.append('upload_preset', 'frontend_uploads');
           formData.append('folder', `uxwireframe/${section}`);
+          // Add filename as public_id prefix (allowed parameter)
+          formData.append('filename_override', file.name);
   
           const response = await fetch(CLOUDINARY_CONFIG.apiUrl, {
             method: 'POST',
             body: formData
           });
+  
           if (!response.ok) {
-            throw new Error('Upload failed for ' + file.name);
+            const error = await response.json();
+            throw new Error(error.message || 'Upload failed');
           }
+  
           const data = await response.json();
           return {
             name: file.name,
@@ -231,29 +234,47 @@ const UXWireframeGenerator = () => {
             uploadDate: new Date().toISOString()
           };
         });
+  
         const uploadedFiles = await Promise.all(uploadPromises);
         setUploads(prev => ({
           ...prev,
           [section]: {
             ...prev[section],
-            // Append uploaded files to files array and clear pendingFiles
             files: [...prev[section].files, ...uploadedFiles],
             pendingFiles: []
           }
         }));
-        // Optionally, log file paths for ML team
-        console.log(`File paths for ${section}:`, uploadedFiles.map(file => ({
-          name: file.name,
-          cloudinaryUrl: file.url,
-          publicId: file.path
-        })));
       }
+      fetchLatestFourFiles();
       alert('All files have been uploaded successfully.');
     } catch (error) {
       console.error('Error uploading files:', error);
       alert(`Error uploading files: ${error.message}`);
     }
   };
+
+  const fetchLatestFourFiles = async () => {
+    try {
+        const response = await fetch('https://featurebackend.onrender.com/fetchfile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch files");
+        }
+
+        const data = await response.json();
+        console.log("Latest Four Files:", data);
+        return data;
+
+    } catch (error) {
+        console.error("Error fetching latest four files:", error);
+        return [];
+    }
+};
 
   
 
