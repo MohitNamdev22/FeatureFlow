@@ -14,6 +14,7 @@ const UXWireframeGenerator = () => {
   const [email, setEmail] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [filesUploaded, setFilesUploaded] = useState(false);
 const [generatedInstructions, setGeneratedInstructions] = useState('');
   
   
@@ -286,10 +287,12 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         }));
       }
       fetchLatestFourFiles();
+      setFilesUploaded(true);
       alert('All files have been uploaded successfully.');
     } catch (error) {
       console.error('Error uploading files:', error);
       alert(`Error uploading files: ${error.message}`);
+      setFilesUploaded(false);
     }
   };
 
@@ -421,18 +424,13 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
       <p className="text-xs text-gray-600">Include layout requirements, component specs, and design guidelines.</p>
     </div>
   </div>
-  <textarea 
-    className="w-full h-32 border rounded p-2 text-sm mb-2"
-    placeholder="Paste your UX specifications here..."
-    value={uploads.uxSpecs.text}
-    onChange={(e) => handleTextChange('uxSpecs', e.target.value)}
-  />
   <div className="flex flex-col space-y-2">
     <input
       type="file"
       id="uxSpecs-upload"
       className="hidden"
       multiple
+      accept=".txt"
       onChange={(e) => handleLocalFileUpload('uxSpecs', e)}
     />
     <label 
@@ -442,6 +440,7 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
       <Upload size={16} className="mr-1" />
       Upload file
     </label>
+    <p className="text-xs text-gray-500 italic">Only .txt files are supported</p>
     {(uploads.uxSpecs.pendingFiles.length > 0 || uploads.uxSpecs.files.length > 0) && (
       <div className="mt-2">
         <p className="text-xs text-gray-600 mb-1">Selected files:</p>
@@ -473,18 +472,13 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         <p className="text-xs text-gray-600">Add insights from user interviews, surveys, and analytics</p>
       </div>
     </div>
-    <textarea 
-      className="w-full h-32 border rounded p-2 text-sm mb-2"
-      placeholder="Paste your user research data here..."
-      value={uploads.userResearch.text}
-      onChange={(e) => handleTextChange('userResearch', e.target.value)}
-    />
+    
     <div className="flex flex-col space-y-2">
       <input
         type="file"
         id="userResearch-upload"
         className="hidden"
-        multiple
+        accept=".txt"
         onChange={(e) => handleLocalFileUpload('userResearch', e)}
       />
       <label 
@@ -494,6 +488,7 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         <Upload size={16} className="mr-1" />
         Upload file
       </label>
+      <p className="text-xs text-gray-500 italic">Only .txt files are supported</p>
       {(uploads.userResearch.pendingFiles.length > 0 || uploads.userResearch.files.length > 0) && (
       <div className="mt-2">
         <p className="text-xs text-gray-600 mb-1">Selected files:</p>
@@ -525,18 +520,12 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         <p className="text-xs text-gray-600">Include functional and technical requirements</p>
       </div>
     </div>
-    <textarea 
-      className="w-full h-32 border rounded p-2 text-sm mb-2"
-      placeholder="Paste your requirements here..."
-      value={uploads.requirements.text}
-      onChange={(e) => handleTextChange('requirements', e.target.value)}
-    />
     <div className="flex flex-col space-y-2">
       <input
         type="file"
         id="requirements-upload"
         className="hidden"
-        multiple
+        accept='.txt'
         onChange={(e) => handleLocalFileUpload('requirements', e)}
       />
       <label 
@@ -546,6 +535,7 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         <Upload size={16} className="mr-1" />
         Upload file
       </label>
+      <p className="text-xs text-gray-500 italic">Only .txt files are supported</p>
 
 {(uploads.requirements.pendingFiles.length > 0 || uploads.requirements.files.length > 0) && (
       <div className="mt-2">
@@ -579,18 +569,12 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         <p className="text-xs text-gray-600">Include discussion points and decisions</p>
       </div>
     </div>
-    <textarea 
-      className="w-full h-32 border rounded p-2 text-sm mb-2"
-      placeholder="Paste your meeting notes here..."
-      value={uploads.meetingNotes.text}
-      onChange={(e) => handleTextChange('meetingNotes', e.target.value)}
-    />
     <div className="flex flex-col space-y-2">
       <input
         type="file"
         id="meetingNotes-upload"
         className="hidden"
-        multiple
+        accept='.txt'
         onChange={(e) => handleLocalFileUpload('meetingNotes', e)}
       />
       <label 
@@ -600,6 +584,7 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
         <Upload size={16} className="mr-1" />
         Upload file
       </label>
+      <p className="text-xs text-gray-500 italic">Only .txt files are supported</p>
       {(uploads.meetingNotes.pendingFiles.length > 0 || uploads.meetingNotes.files.length > 0) && (
       <div className="mt-2">
         <p className="text-xs text-gray-600 mb-1">Selected files:</p>
@@ -662,12 +647,24 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
           </div>
         </div>
         
-        <button 
-          className="bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 transition-colors"
-          onClick={handleGenerateClick}
-        >
-          Generate Wireframe Instructions
-        </button>
+        <div className="flex flex-col items-end">
+  <button 
+    className={`py-2 px-6 rounded-md transition-colors ${
+      filesUploaded 
+        ? 'bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer' 
+        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+    }`}
+    onClick={handleGenerateClick}
+    disabled={!filesUploaded}
+  >
+    Generate Wireframe Instructions
+  </button>
+  {!filesUploaded && (
+    <p className="text-xs text-gray-500 mt-1">
+      Please upload files first
+    </p>
+  )}
+</div>
       </div>
 
       
