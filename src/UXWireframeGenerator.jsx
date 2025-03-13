@@ -13,6 +13,8 @@ const UXWireframeGenerator = () => {
   const [showEmailPopup, setShowEmailPopup] = useState(false);
   const [email, setEmail] = useState('');
   const [isVerified, setIsVerified] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+const [generatedInstructions, setGeneratedInstructions] = useState('');
   
   
 
@@ -108,14 +110,52 @@ const UXWireframeGenerator = () => {
   };
 
 
-  const handleGenerateClick = () => {
-    setShowEmailPopup(true);
+  const handleGenerateClick = async () => {
+    if (!isVerified) {
+      setShowEmailPopup(true);
+      return;
+    }
+  
+    setIsGenerating(true);
+    try {
+      const response = await fetch('http://20.106.63.29:8080/generate-design-instructions');
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate instructions');
+      }
+  
+      const data = await response.json();
+      setGeneratedInstructions(data.instructions);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to generate instructions. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const handleEmailSubmit = (email) => {
+  const handleEmailSubmit = async (email) => {
     setEmail(email);
     setIsVerified(true);
     setShowEmailPopup(false);
+    
+    // Automatically trigger generate instructions
+    setIsGenerating(true);
+    try {
+      const response = await fetch('http://20.106.63.29:8080/generate-design-instructions');
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate instructions');
+      }
+  
+      const data = await response.json();
+      setGeneratedInstructions(data.instructions);
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to generate instructions. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Define the renderUploadSection function that was missing
@@ -641,52 +681,50 @@ const UXWireframeGenerator = () => {
       
         {/* Instructions Box */}
         <div className="border rounded-lg">
-          <div className="flex items-center justify-between p-3 border-b">
-            <h3 className="font-medium">Generated Instructions</h3>
-            <div className="flex items-center">
-              <button className="flex items-center text-gray-600 mr-3">
-                <Edit size={16} className="mr-1" />
-                Edit
-              </button>
-              <button className="flex items-center text-gray-600">
-                <Download size={16} className="mr-1" />
-                Export
-              </button>
-            </div>
-          </div>
+  <div className="flex items-center justify-between p-3 border-b">
+    <h3 className="font-medium">Generated Instructions</h3>
+    <div className="flex items-center">
+      <button className="flex items-center text-gray-600 mr-3">
+        <Edit size={16} className="mr-1" />
+        Edit
+      </button>
+      <button className="flex items-center text-gray-600">
+        <Download size={16} className="mr-1" />
+        Export
+      </button>
+    </div>
+  </div>
                 
           {/* Added max-height and overflow-y-auto for scrolling */}
           <div className="p-4 relative max-h-[600px] overflow-y-auto">
-            <div className="pr-12">
-              <p className="mb-3">Here are the Motiff design instructions for the Brainstorming Canvas model screen in Idea360.</p>
-              
-              <p className="text-red-600 font-semibold mb-3">📌 Motiff Instructions – Brainstorming Canvas</p>
-              
-              <p className="font-semibold mb-1">Component Type: Full-Screen Modal / Workspace Layout</p>
-              <p className="mb-3">Purpose: Provides an interactive canvas where users can capture, organize, and refine ideas visually during brainstorming sessions.</p>
-              
-              <p className="text-indigo-600 font-semibold mb-3">🖌 UI Design Guidelines</p>
-              
-              <p className="font-semibold mb-2">1️⃣ Layout & Structure</p>
-              <ul className="list-disc pl-6 mb-3 space-y-1">
-                <li>Screen Type: Full-screen workspace</li>
-                <li>Background Color: Light gray (#F5F5F5)</li>
-                <li>Padding: 24px</li>
-                <li>Grid System: Flexible, supports free-form idea placement</li>
-                <li>Primary Sections:
-                  <ul className="list-disc pl-6 mt-1">
-                    <li>Header Bar – Controls & Session Info</li>
-                    <li>Canvas Area – Free-form idea organization</li>
-                    <li>Sidebar (Optional) – Idea categories, templates, or suggested prompts</li>
-                  </ul>
-                </li>
-              </ul>
-            </div>
-                
-            <button className="mt-4 bg-indigo-600 text-white py-2 px-6 rounded-md hover:bg-indigo-700 transition-colors">
-              Upload Lofi Design
-            </button>
-          </div>
+    {isGenerating ? (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div className="text-center">
+          <p className="text-lg font-semibold text-gray-700">Generating Instructions</p>
+          <p className="text-sm text-gray-500">Please wait while we process your files...</p>
+        </div>
+      </div>
+    ) : generatedInstructions ? (
+      <div className="prose prose-sm max-w-none">
+        {generatedInstructions.split('\n').map((line, index) => {
+          if (line.startsWith('**')) {
+            return <h3 key={index} className="font-bold text-lg mt-4">{line.replace(/\*\*/g, '')}</h3>;
+          } else if (line.startsWith('---')) {
+            return <hr key={index} className="my-4" />;
+          } else if (line.startsWith('1.') || line.startsWith('2.') || line.startsWith('3.')) {
+            return <li key={index} className="ml-4">{line}</li>;
+          } else {
+            return <p key={index} className="mb-2">{line}</p>;
+          }
+        })}
+      </div>
+    ) : (
+      <div className="text-center py-12 text-gray-500">
+        <p>Click "Generate Wireframe Instructions" to start</p>
+      </div>
+    )}
+  </div>
         </div>
 
         {/* Wireframes Box - Right Column */}
