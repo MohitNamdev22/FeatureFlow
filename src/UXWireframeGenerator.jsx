@@ -118,7 +118,7 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
   
     setIsGenerating(true);
     try {
-      const response = await fetch('http://20.106.63.29:8080/generate-design-instructions');
+      const response = await fetch('https://featurebackend.onrender.com/fetchfile/generate');
       
       if (!response.ok) {
         throw new Error('Failed to generate instructions');
@@ -142,7 +142,7 @@ const [generatedInstructions, setGeneratedInstructions] = useState('');
     // Automatically trigger generate instructions
     setIsGenerating(true);
     try {
-      const response = await fetch('http://20.106.63.29:8080/generate-design-instructions');
+      const response = await fetch('https://featurebackend.onrender.com/fetchfile/generate');
       
       if (!response.ok) {
         throw new Error('Failed to generate instructions');
